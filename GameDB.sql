@@ -511,7 +511,7 @@ BEGIN
         
         START TRANSACTION;
         
-        SELECT `ROW`, COL INTO currentRow, currentCol FROM PlayerGame 
+        SELECT `ROW`, COL INTO currentRow, currentCol FROM Tile 
         WHERE PlayerID = PlayerID AND GameID = GameID FOR UPDATE;
         
         SET newRow = currentRow;
@@ -549,6 +549,29 @@ BEGIN
 -- CODE FOR PLAYER SCORING
 DROP PROCEDURE IF EXISTS UpdateScore;
 DELIMITER $$
+CREATE PROCEDURE UpdateScore(IN PlayerID INT, IN ScoreChange INT)
+BEGIN
+
+DECLARE exit_flag BOOLEAN DEFAULT FALSE;
+DECLARE CONTINUE HANDLER FOR SQLEXCEPTION
+BEGIN
+SET exit_flag = TRUE;
+ROLLBACK;
+SELECT 'An error happened when updating the score' AS Message;
+END;
+
+START TRANSACTION;
+
+	UPDATE Player 
+    SET ScoreRecord = ScoreRecord + ScoreChange 
+    WHERE PlayerID = PlayerID;
+    
+    IF NOT exit_flag THEN
+    COMMIT;
+    SELECT 'Score has updated!' AS Message;
+    END IF;
+END$$
+DELIMITER ;
 
 
 
@@ -625,7 +648,7 @@ BEGIN
     SELECT TileID INTO currentTileID FROM Item_Tile WHERE ButterflyID = ButterflyID;
 
     -- Check if the new tile is empty
-    IF EXISTS (SELECT 1 FROM Tile WHERE TileID = NewTileID AND TileType = 'Empty') THEN
+    IF EXISTS (SELECT * FROM Tile WHERE TileID = 1 AND TileType = 'Empty') THEN
         -- Update the Item_Tile table
         UPDATE Item_Tile 
         SET TileID = NewTileID 
@@ -647,6 +670,7 @@ BEGIN
 END$$
 
 DELIMITER ;
+
 
 
 
@@ -736,9 +760,12 @@ CREATE PROCEDURE GetActiveGames()
 BEGIN
 	SELECT GameID, MapID, `Status`
     FROM Game
-    WHERE `Status` = 'Active';
+    WHERE `Status` = 'IN_PROGRESS';
 END $$
 DELIMITER ;
+
+
+
 
 -- CODE TO GET A LIST OF ALL PLAYERS
 #DROP PROCEDURE IF EXISTS GetAllPlayers;
